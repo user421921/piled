@@ -1,0 +1,61 @@
+#!/bin/bash
+# cw blinker for pi 0/02w
+# Usage: ./morse_led.sh "Your message here"
+
+#set -x
+# Mapping of Morse code for letters and numbers
+declare -A MORSE=(
+    [A]=".-"   [B]="-..." [C]="-.-." [D]="-.."  [E]="."
+    [F]="..-." [G]="--."  [H]="...." [I]=".."   [J]=".---"
+    [K]="-.-"  [L]=".-.." [M]="--"   [N]="-."   [O]="---"
+    [P]=".--." [Q]="--.-" [R]=".-."  [S]="..."  [T]="-"
+    [U]="..-"  [V]="...-" [W]=".--"  [X]="-..-" [Y]="-.--"
+    [Z]="--.." [0]="-----" [1]=".----" [2]="..---" [3]="...--"
+    [4]="....-" [5]="....." [6]="-...." [7]="--..." [8]="---.."
+    [9]="----."
+)
+
+# LED paths
+LED_PATH="/sys/class/leds/ACT/brightness"
+
+# Function to control LED blink timing
+blink_led() {
+    echo 1 | sudo tee $LED_PATH > /dev/null
+    sleep $1
+    echo 0 | sudo tee $LED_PATH > /dev/null
+    sleep 0.2
+}
+
+# Function to blink Morse code
+blink_morse() {
+    local message=$1
+    for (( i=0; i<${#message}; i++ )); do
+        char=${message:$i:1}
+        if [[ $char == " " ]]; then
+            sleep 1.5  # Space between words
+        else
+            code=${MORSE[${char^^}]}  # Uppercase lookup
+            if [[ -n $code ]]; then
+                for (( j=0; j<${#code}; j++ )); do
+                    symbol=${code:$j:1}
+                    if [[ $symbol == "." ]]; then
+                        blink_led 0.2  # Dot duration
+                    elif [[ $symbol == "-" ]]; then
+                        blink_led 0.6  # Dash duration
+                    fi
+                done
+                sleep 0.6  # Space between letters
+            fi
+        fi
+    done
+}
+
+# Main script
+if [[ -z "$1" ]]; then
+    echo "Usage: $0 \"Your text message\""
+    exit 1
+fi
+
+MESSAGE=$1
+echo "Transmitting: \"$MESSAGE\""
+blink_morse "$MESSAGE"
